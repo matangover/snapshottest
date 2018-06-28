@@ -4,6 +4,8 @@ import shutil
 from .sorted_dict import SortedDict
 from .generic_repr import GenericRepr
 from LANDR.Utilities.CompareAudio import main as compareAudio
+import sys
+from collections import defaultdict
 
 def trepr(s):
     text = '\n'.join([repr(line).lstrip('u')[1:-1] for line in s.split('\n')])
@@ -98,17 +100,23 @@ class Formatter(object):
 musicEngineconfigFilePath = "/Users/Matan/Documents/code/MasteringEngineWorker/PythonMusicEngine/Config/mastering.engine_local.config"
 class AudioSnapshot(object):
     def __init__(self, filename):
-        self.filename = filename
+        self.filename = str(filename)
         self.storedFilename = None
+        self.equalsCache = {}
 
     def __repr__(self):
         return "AudioSnapshot(join(dirname(__file__), \"{}\"))".format(self.storedFilename)
 
     def __eq__(self, other):
-        args = ["CompareAudio.py", self.filename, other.filename, "-c",
-            musicEngineconfigFilePath, '-ie', os.path.splitext(self.filename)[1]]
-        numDiffs = compareAudio(args)
-        return sum(numDiffs) == 0
+        if other.filename in self.equalsCache:
+            return self.equalsCache[other.filename]
+            
+        sys.argv = ["CompareAudio.py", self.filename, other.filename, "-c",
+            musicEngineconfigFilePath, '-ie', "WAV"]#os.path.splitext(self.filename)[1][1:]]
+        numDiffs = compareAudio(sys.argv)
+        equals = sum(numDiffs) == 0
+        self.equalsCache[other.filename] = equals
+        return equals
 
     def store(self, module, test_name):
         snapshotDir = os.path.splitext(module.filepath)[0]
@@ -116,4 +124,4 @@ class AudioSnapshot(object):
             os.makedirs(snapshotDir)
         snapshotFile = os.path.join(snapshotDir, test_name)
         shutil.copy(self.filename, snapshotFile)
-        self.storedFilename = snapshotFile
+        self.storedFilename = os.path.join(os.path.basename(snapshotDir), test_name)

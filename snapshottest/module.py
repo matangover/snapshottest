@@ -6,7 +6,7 @@ from collections import defaultdict
 import logging
 
 from .snapshot import Snapshot
-from .formatter import Formatter
+from .formatter import Formatter, AudioSnapshot
 from .diff import PrettyDiff
 # from .error import SnapshotError
 
@@ -230,10 +230,13 @@ class SnapshotTest(object):
         prev_snapshot = not self.update and self.module[self.test_name]
         if prev_snapshot:
             try:
-                self.assert_equals(
-                    PrettyDiff(value, self),
-                    PrettyDiff(prev_snapshot, self)
-                )
+                if isinstance(value, AudioSnapshot):
+                    self.assert_equals(value, prev_snapshot)
+                else:
+                    self.assert_equals(
+                        PrettyDiff(value, self),
+                        PrettyDiff(prev_snapshot, self)
+                    )
             except BaseException:
                 self.fail()
                 raise
