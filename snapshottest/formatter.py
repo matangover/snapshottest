@@ -1,8 +1,9 @@
 import six
-
+import os
+import shutil
 from .sorted_dict import SortedDict
 from .generic_repr import GenericRepr
-
+from LANDR.Utilities.CompareAudio import main as compareAudio
 
 def trepr(s):
     text = '\n'.join([repr(line).lstrip('u')[1:-1] for line in s.split('\n')])
@@ -45,6 +46,12 @@ class Formatter(object):
             return self.format_str(value, indent)
         elif isinstance(value, (int, float, complex, bool, bytes, set, frozenset, GenericRepr)):
             return self.format_std_type(value, indent)
+        elif isinstance(value, AudioSnapshot):
+            if self.imports:
+                self.imports['snapshottest.formatter'].add('AudioSnapshot')
+                self.imports['os.path'].add('dirname')
+                self.imports['os.path'].add('join')
+            return repr(value)
 
         return self.format_object(value, indent)
 
@@ -87,3 +94,26 @@ class Formatter(object):
             for item in value
         ]
         return '(%s)' % (','.join(items) + self.lfchar + self.htchar * indent)
+
+musicEngineconfigFilePath = "/Users/Matan/Documents/code/MasteringEngineWorker/PythonMusicEngine/Config/mastering.engine_local.config"
+class AudioSnapshot(object):
+    def __init__(self, filename):
+        self.filename = filename
+        self.storedFilename = None
+
+    def __repr__(self):
+        return "AudioSnapshot(join(dirname(__file__), \"{}\"))".format(self.storedFilename)
+
+    def __eq__(self, other):
+        args = ["CompareAudio.py", self.filename, other.filename, "-c",
+            musicEngineconfigFilePath, '-ie', os.path.splitext(self.filename)[1]]
+        numDiffs = compareAudio(args)
+        return sum(numDiffs) == 0
+
+    def store(self, module, test_name):
+        snapshotDir = os.path.splitext(module.filepath)[0]
+        if not os.path.exists(snapshotDir):
+            os.makedirs(snapshotDir)
+        snapshotFile = os.path.join(snapshotDir, test_name)
+        shutil.copy(self.filename, snapshotFile)
+        self.storedFilename = snapshotFile

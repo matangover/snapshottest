@@ -218,6 +218,8 @@ class SnapshotTest(object):
 
     def store(self, data):
         self.module[self.test_name] = data
+        if hasattr(data, "store"):
+            data.store(self.module, self.test_name)
 
     def assert_equals(self, value, snapshot):
         assert value == snapshot
