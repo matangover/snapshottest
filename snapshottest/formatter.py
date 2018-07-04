@@ -3,7 +3,7 @@ import os
 import shutil
 from .sorted_dict import SortedDict
 from .generic_repr import GenericRepr
-from LANDR.Utilities.CompareAudio import main as compareAudio
+from .serializable import Serializable
 import sys
 from collections import defaultdict
 
@@ -48,12 +48,8 @@ class Formatter(object):
             return self.format_str(value, indent)
         elif isinstance(value, (int, float, complex, bool, bytes, set, frozenset, GenericRepr)):
             return self.format_std_type(value, indent)
-        elif isinstance(value, AudioSnapshot):
-            if self.imports:
-                self.imports['snapshottest.formatter'].add('AudioSnapshot')
-                self.imports['os.path'].add('dirname')
-                self.imports['os.path'].add('join')
-            return repr(value)
+        elif isinstance(value, Serializable):
+            return self.format_serializable(value, indent)
 
         return self.format_object(value, indent)
 
@@ -97,6 +93,13 @@ class Formatter(object):
         ]
         return '(%s)' % (','.join(items) + self.lfchar + self.htchar * indent)
 
+    def format_serializable(self, value, indent):
+        if self.imports:
+                self.imports['snapshottest.formatter'].add('AudioSnapshot')
+                self.imports['os.path'].add('dirname')
+                self.imports['os.path'].add('join')
+        return repr(value)
+
 musicEngineconfigFilePath = "/Users/Matan/Documents/code/MasteringEngineWorker/PythonMusicEngine/Config/mastering.engine_local.config"
 class AudioSnapshot(object):
     def __init__(self, filename):
@@ -113,6 +116,7 @@ class AudioSnapshot(object):
             
         sys.argv = ["CompareAudio.py", self.filename, other.filename, "-c",
             musicEngineconfigFilePath, '-ie', "WAV"]#os.path.splitext(self.filename)[1][1:]]
+        from LANDR.Utilities.CompareAudio import main as compareAudio
         numDiffs = compareAudio(sys.argv)
         equals = sum(numDiffs) == 0
         self.equalsCache[other.filename] = equals
